@@ -61,6 +61,6 @@ converting images quickly here are the basic options to do so:
 
 ## Contact
 
-Stefan Ruppert <webp@klimaschutz-von-unten.de>
-Web:     https://klimaschutz-von-unten.de/
-Twitter: https://twitter.com/unten_de
+Stefan Ruppert <webp@klimaschutz-von-unten.de>  
+Web:     https://klimaschutz-von-unten.de/  
+Twitter: https://twitter.com/unten_de  
