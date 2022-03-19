@@ -47,6 +47,8 @@ Results in the following output:
     -rw-rw-r-- 1 ruppert ruppert 898152 Mär 19 12:18 Perito-Moreno-2013.jpg
     -rw-rw-r-- 1 ruppert ruppert  67518 Mär 19 14:23 Perito-Moreno-2013.webp
 
+![Perito Moreno glacier](https://github.com/klimaschutz-von-unten-de/webp/Perito-Moreno-2013.webp "Perito-Moreno glacier in 2013")
+
 ## Main Options
 
 With **ksvu-webp.sh --help** a complete list of available options are printed out. To start
