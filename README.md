@@ -13,7 +13,7 @@ converting an image with both tools.
 ## Prerequisites
 
 The following tools are used and therefore need to be installed before using
-ksvu-webp.sh script:
+**ksvu-webp.sh** script:
 
 * **ImageMagick** - https://imagemagick.org/
 * **GIMP**        - https://www.gimp.org/
@@ -53,10 +53,10 @@ With **ksvu-webp.sh --help** a complete list of available options are printed ou
 converting images quickly here are the basic options to do so:
 
 * **-q\<val>** or **--quality \<val>** specifying the compression quality value as known from jpg images
-* **-s<val>** or **--scale <val>** specifying an image scale percentage value to scale down the image
-* **-h<val>** or **--height <val>** specifying the number of pixel for image height to scale down the image
-* **-w<val>** or **--width <val>** specifying the number of pixel for image width to scale down the image
-* **-v<val>** or **--verbose <val>** specifying the verbose level (range from 0 to 3). Defaults to 1. Zero indicates no output at all
+* **-s\<val>** or **--scale \<val>** specifying an image scale percentage value to scale down the image
+* **-h\<val>** or **--height \<val>** specifying the number of pixel for image height to scale down the image
+* **-w\<val>** or **--width \<val>** specifying the number of pixel for image width to scale down the image
+* **-v\<val>** or **--verbose \<val>** specifying the verbose level (range from 0 to 3). Defaults to 1. Zero indicates no output at all
 * **-Q** or **--pngquant**: use pngquant with 256 colors for png images before converting to webp
 
 ## Contact
