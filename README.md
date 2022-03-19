@@ -15,10 +15,10 @@ converting an image with both tools.
 The following tools are used and therefore need to be installed before using
 ksvu-webp.sh script:
 
-*ImageMagick* - https://imagemagick.org/
-*GIMP*        - https://www.gimp.org/
-*pngquant*    - https://pngquant.org/
+* **ImageMagick** - https://imagemagick.org/
+* **GIMP**        - https://www.gimp.org/
+* **pngquant**    - https://pngquant.org/
 
-During script execution *sed* and *awk* are used for calculating various strings
-and numbers. For visual comparison *firefox* is used to open original and converted
+During script execution **sed** and **awk** are used for calculating various strings
+and numbers. For visual comparison **firefox** is used to open original and converted
 images.
