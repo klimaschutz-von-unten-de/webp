@@ -53,6 +53,8 @@ Results in the following output:
     -rw-rw-r-- 1 ruppert ruppert  63674 Mär 26 23:18 Perito-Moreno-2013.webp
     Conversion summary: cwebp=1
 
+![Perito Moreno glacier](https://github.com/klimaschutz-von-unten-de/webp/blob/main/Perito-Moreno-2013.webp "Perito-Moreno glacier in 2013")
+
 ## Main Options
 
 With **ksvu-webp.sh --help** a complete list of available options are printed out. To start
