@@ -17,7 +17,7 @@ The following tools are used and therefore need to be installed before using
 * **ImageMagick** (required) - https://imagemagick.org/
 * **GIMP** (optional)        - https://www.gimp.org/
 * **cwebp** (optional)       - https://developers.google.com/speed/webp/docs/cwebp
-* **cjpeg**  (optionao)      - https://github.com/mozilla/mozjpeg
+* **cjpeg**  (optional)      - https://github.com/mozilla/mozjpeg
 * **pngquant** (optional)    - https://pngquant.org/
 
 During script execution **sed** and **awk** are used for calculating various strings
