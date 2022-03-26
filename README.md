@@ -18,6 +18,8 @@ The following tools are used and therefore need to be installed before using
 * **ImageMagick** - https://imagemagick.org/
 * **GIMP**        - https://www.gimp.org/
 * **pngquant**    - https://pngquant.org/
+* **cwebp**       - https://developers.google.com/speed/webp/docs/cwebp
+* **cjpeg**       - https://github.com/mozilla/mozjpeg
 
 During script execution **sed** and **awk** are used for calculating various strings
 and numbers. For visual comparison **firefox** is used to open original and converted
@@ -39,13 +41,17 @@ Converting a photo of the Perito Moreno glacier in Patagonia, Argentina shot in 
 
 Results in the following output:
 
-    Converting Perito-Moreno-2013.jpg -> Perito-Moreno-2013.webp ... (height=0: 2000 => 2000 [100%], height:1500)
-    (Perito-Moreno-2013.jpg[2000,1500,lossless=0] -> Perito-Moreno-2013-gimp.webp[2000,1500])
-    (gimp: 898152 -> 70258 = 92.2%) (height=0: 2000 => 0 [100%], height:1500)
-    (Perito-Moreno-2013.jpg[2000,1500,lossless=0] -> Perito-Moreno-2013-magick.webp[2000,1500])
-    (magick: 898152 -> 67518 = 92.5%) (using imagemagick Perito-Moreno-2013.webp version) done
-    -rw-rw-r-- 1 ruppert ruppert 898152 Mär 19 12:18 Perito-Moreno-2013.jpg
-    -rw-rw-r-- 1 ruppert ruppert  67518 Mär 19 14:23 Perito-Moreno-2013.webp
+    Converting Perito-Moreno-2013.jpg -> Perito-Moreno-2013.webp ...
+        (height=0: width:2000 => 0 [100%], height:1500)
+    	(Perito-Moreno-2013.jpg[2000,1500,quality=94] -> Perito-Moreno-2013.webp[2000,1500,quality=40])
+      	  (gimp: 898152 -> 70258 = 92.2%)
+      	  (cwebp: 898152 -> 63674 = 92.9%)
+      	  (magick: 898152 -> 67518 = 92.5%)
+    	(using cwebp Perito-Moreno-2013.webp version)
+    done
+    -rw-rw-r-- 1 ruppert ruppert 898152 Mär 26 22:17 Perito-Moreno-2013.jpg
+    -rw-rw-r-- 1 ruppert ruppert  63674 Mär 26 23:18 Perito-Moreno-2013.webp
+    Conversion summary: cwebp=1
 
 ## Main Options
 
