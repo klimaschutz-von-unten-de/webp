@@ -34,23 +34,26 @@ enabling verbose mode 2 (-v2) and showing conversion results using *ls -l* (-L):
 ## An example
 
 Converting a photo of the Perito Moreno glacier in Patagonia, Argentina shot in december
-2013 by my self:
+2013 by my self using SSIM metric target 0.95:
 
-    ksvu-webp.sh -q40 -v2 -L Perito-Moreno-2013.jpg
+    ksvu-webp.sh -S95 -v4 -t -L Perito-Moreno-2013.jpg
 
 Results in the following output:
 
-    Converting Perito-Moreno-2013.jpg -> Perito-Moreno-2013.webp ...
+    Converting Perito-Moreno-2013.jpg -> ./Perito-Moreno-2013.webp ...
         (height=0: width:2000 => 0 [100%], height:1500)
-    	(Perito-Moreno-2013.jpg[2000,1500,quality=94] -> Perito-Moreno-2013.webp[2000,1500,quality=40])
-      	  (gimp: 898152 -> 70258 = 92.2%)
-      	  (cwebp: 898152 -> 63674 = 92.9%)
-      	  (magick: 898152 -> 67518 = 92.5%)
-    	(using cwebp Perito-Moreno-2013.webp version)
-    done
+    	(Perito-Moreno-2013.jpg[2000,1500,quality=94] -> ./Perito-Moreno-2013.webp[2000,1500,quality=90]).
+          (gimp: 898152 -> 401950 = 55.2%, quality=90, ssim=0.960801, timing: duration=5.46s, cpu duration=11.06s usage=203%).
+      	  (cwebp: 898152 -> 325542 = 63.8%, quality=90, ssim=0.958907, timing: duration=7.08s, cpu duration=12.50s usage=177%).
+          (magick: 898152 -> 365442 = 59.3%, quality=90, ssim=0.960608, timing: duration=10.00s, cpu duration=16.22s usage=162%)
+	(using cwebp tool for ssim=0.95 target conversion (ssimsize=339492)
+            (current ssim=0.958907 is greater than target ssim=0.95, diff=-0.009, quality_add=-3,quality=87[min:87,max=90]).
+          (cwebp: 898152 -> 236470 = 73.7%, quality=87, ssim=0.948939, timing: duration=10.00s, cpu duration=16.22s usage=162%)
+        (using cwebp ./Perito-Moreno-2013.webp version; size: 898152 -> 236470 = 73.7%; ssim=0.948939)
     -rw-rw-r-- 1 ruppert ruppert 898152 Mär 26 22:17 Perito-Moreno-2013.jpg
-    -rw-rw-r-- 1 ruppert ruppert  63674 Mär 26 23:18 Perito-Moreno-2013.webp
-    Conversion summary: cwebp=1
+    -rw-rw-r-- 1 ruppert ruppert 236470 Apr  2 20:24 Perito-Moreno-2013.webp
+    Conversion Perito-Moreno-2013.jpg (timing: duration=28.66s, cpu duration=52.07s usage=182%)  done
+    Conversion summary: cwebp=1 (timing: duration=28.80s, cpu duration=52.19s usage=181%) 
 
 ![Perito Moreno glacier](https://github.com/klimaschutz-von-unten-de/webp/blob/main/Perito-Moreno-2013.webp "Perito-Moreno glacier in 2013")
 
@@ -59,11 +62,12 @@ Results in the following output:
 With **ksvu-webp.sh --help** a complete list of available options are printed out. To start
 converting images quickly here are the basic options to do so:
 
-* **-q\<val>** or **--quality \<val>** specifying the compression quality value as known from jpg images
-* **-s\<val>** or **--scale \<val>** specifying an image scale percentage value to scale down the image
-* **-h\<val>** or **--height \<val>** specifying the number of pixel for image height to scale down the image
-* **-w\<val>** or **--width \<val>** specifying the number of pixel for image width to scale down the image
-* **-v\<val>** or **--verbose \<val>** specifying the verbose level (range from 0 to 3). Defaults to 1. Zero indicates no output at all
+* **-q\<val>** or **--quality=\<val>** specifying the compression quality value as known from jpg images
+* **-s\<val>** or **--scale=\<val>** specifying an image scale percentage value to scale down the image
+* **-S[\<val>]** or **--compare-ssim[=\<val>]** if present SSIM metric is calculated for each conversion. If \<val> is specified try to convert using the specified target SSIM value.
+* **-h\<val>** or **--height=\<val>** specifying the number of pixel for image height to scale down the image
+* **-w\<val>** or **--width=\<val>** specifying the number of pixel for image width to scale down the image
+* **-v[\<val>]** or **--verbose=\<val>** specifying the verbose level (range from 0 to 5). Defaults to 1. Zero indicates no output at all
 * **-Q** or **--pngquant**: use pngquant with 256 colors for png images before converting to webp
 
 ## Contact
@@ -71,3 +75,7 @@ converting images quickly here are the basic options to do so:
 Stefan Ruppert <webp@klimaschutz-von-unten.de>  
 Web:     https://klimaschutz-von-unten.de/  
 Twitter: https://twitter.com/unten_de  
+
+## License
+
+ksvu-webp.sh tool is licensed under the GPLv3.
