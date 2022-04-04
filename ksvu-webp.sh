@@ -3,8 +3,6 @@
 # This file is part of the ksvu-webp distribution:
 # https://github.com/klimaschutz-von-unten-de/webp
 #
-# Version: ksvu-webp.sh 0.9
-#
 # Copyright (c) 2022 Stefan Ruppert <webp@klimaschutz-von-unten.de>.
 #
 # This script is free software: you can redistribute it and/or modify
@@ -24,6 +22,9 @@
 # optional installed tools: gimp, cwebp, pngquant, cjpeg, awk, sed,
 #     firefox or google-chrome for comparing converted and original images
 #
+
+# version of ksvu-webp.sh script
+ksvu_webp_version="1.0"
 
 # start script options
 opt_all=0
@@ -271,16 +272,7 @@ function ksvu-webp-convert-cwebp()
 
 function ksvu-webp-convert-cjpeg()
 {
-    if test $imgheight -eq $inpheight -a $imgwidth -eq $inpwidth; then
-	cjpeg -quality $var_quality -outfile "$2" "$1"
-    elif test $imgheight -eq $inpwidth -a $imgwidth -eq $inpheight; then
-	cjpeg -quality $var_quality -outfile "$2" "$1"
-    else
-	ksvu-printf 2 "\n      (cjpeg scaling to ${imgwidth}x${imgheight})"
-	convert -resize "${imgwidth}x${imgheight}" "$1" "$2.jpg"
-	cjpeg -quality $var_quality -outfile "$2" "$2.jpg"
-	rm -f "$2.jpg"
-    fi
+    cjpeg -quality $var_quality -outfile "$2" "$1"
 }
 
 function ksvu-webp-convert-magick()
@@ -296,7 +288,7 @@ function ksvu-webp-convert-magick()
 	    magick_lossless="-define webp:lossless=false"
 	fi
     fi
-    convert -quality $var_quality -scale "${imgwidth}x${imgheight}" $magick_lossless -define webp:thread-level=0 -define webp:pass=10 -define webp:preprocessing=1 -define webp:method=6 -define webp:image-hint:photo "$1" "$2"
+    convert -quality $var_quality -resize "${imgwidth}x${imgheight}" $magick_lossless -define webp:thread-level=0 -define webp:pass=10 -define webp:preprocessing=1 -define webp:method=6 -define webp:image-hint:photo "$1" "$2"
 
 }
 
@@ -349,7 +341,7 @@ function ksvu-webp-convert-ssim-target()
 	fi
 	ksvu-printf 4 "\n        (current ssim=${var_ssim:-0} is $ssim_is than target ssim=$var_ssim_target, diff=$var_ssim_diff, quality_add=$var_quality_add,quality=$var_quality[min:$var_quality_min,max=$var_quality_max])"
 	ksvu-webp-convert-$1 "$3" "$4"
-	ksvu-compress-ratio $1 "$2" "$4"
+	ksvu-compress-ratio $1 "$2" "$3" "$4"
 	ksvu-conversion-info $1
 	var_ssim_diff=$(awk 'BEGIN {printf "%.3f", ('$var_ssim_target' - '${var_ssim:-0}');}' )
 	var_ssim_abs=$(awk 'BEGIN { printf "%.3f", ('$var_ssim_diff'<0 ? - '$var_ssim_diff' : '$var_ssim_diff');}' )
@@ -390,13 +382,44 @@ function ksvu-imagesize-get()
 {
     imgwidth=$opt_width
     imgheight=$opt_height
+
     # get image width and height
     inpwidth=$(identify -format "%w" "$1")
     inpheight=$(identify -format "%h" "$1")
     inpquality=$(identify -format "%Q" "$1")
+
+    if test $var_lossless -eq 1; then
+	if test "$inpquality"; then
+	    inparams="quality=$inpquality"
+	else
+	    inparams="lossless=1"
+	fi
+	outparams="lossless=1"
+    else
+	inparams="quality=$inpquality"
+	outparams="quality=$var_quality"
+    fi
+
+    cp -f "$1" "$3"
     inporient=$(identify -format "%[orientation]" "$1")
+    var_autoorient=""
+    if test "$inporient" != "TopLeft" -a $inporient != "Undefined"; then
+	var_autoorient=" -> perform auto orientation:"
+	mogrify -auto-orient "$3"
+	tmp=$imgwidth
+	imgwidth=$imgheight
+	imgheight=$tmp
+	if test ! -s "$3"; then
+	    echo "$0: auto orientation failed" 1>&2
+	fi
+    fi
 
     ksvu-printf 2 "\n   "
+    ksvu-printf 2 " ($1[$inpwidth,$inpheight,$inparams]$var_autoorient"
+
+    inpwidth=$(identify -format "%w" "$3")
+    inpheight=$(identify -format "%h" "$3")
+
     var_print=0
     if test $opt_scale -gt 0; then
 	imgwidth=$(awk -v iw=$inpwidth -v p=$opt_scale 'BEGIN { printf "%.0f", (iw*p)/100 }')
@@ -412,51 +435,33 @@ function ksvu-imagesize-get()
     else
 	imgwidth=$(awk -v iw=$inpwidth -v ih=$inpheight -v h=$imgheight 'BEGIN { printf "%d", iw*h/ih }')
     fi
-    if test $var_print -eq 1; then
-	ksvu-printf 2 "\n   "
-    fi
-    if test $var_lossless -eq 1; then
-	if test "$inpquality"; then
-	    inparams="quality=$inpquality"
-	else
-	    inparams="lossless=1"
-	fi
-	outparams="lossless=1"
-    else
-	inparams="quality=$inpquality"
-	outparams="quality=$var_quality"
-    fi
-    ksvu-printf 2 " ($1[$inpwidth,$inpheight,$inparams]"
-    if test "$inporient" != "TopLeft" -a $inporient != "Undefined"; then
-	ksvu-printf 2 " -> perform auto orientation"
-	convert -auto-orient "$1" "$3"
-	tmp=$imgwidth
-	imgwidth=$imgheight
-	imgheight=$tmp
-	if test ! -s "$3"; then
-	    echo "$0: auto orientation failed" 1>&2
-	fi
+    if test $imgheight -ne $inpheight -o $imgwidth -ne $inpwidth; then
+	mogrify -resize "${imgwidth}x${imgheight}" "$3"
     fi
     ksvu-printf 2 " -> $2[$imgwidth,$imgheight,$outparams])"
 }
 
 function ksvu-compress-ratio()
 {
+    # $1 tool
+    # $2 input
+    # $3 work
+    # $4 output
     inpsize=$(ls -l "$2" | sed -e 's/  */ /g' | cut -d" " -f5)
-    outsize=$(ls -l "$3" | sed -e 's/  */ /g' | cut -d" " -f5)
+    outsize=$(ls -l "$4" | sed -e 's/  */ /g' | cut -d" " -f5)
     ratio=$(awk -v is=$inpsize -v os=$outsize 'BEGIN { printf "%.1f", (1-(os/is))*100 }')
     var_ssim=0
     var_ssiminfo=""
     var_qualityinfo=""
     if test $opt_compare_ssim -eq 1; then
-	var_ssim=$(compare -auto-orient -metric SSIM "$2" "$3" "null:" 2>&1)
+	var_ssim=$(compare -auto-orient -metric SSIM "$3" "$4" "null:" 2>&1)
 	var_ssiminfo=", ssim=$var_ssim"
 	var_qualityinfo=", quality=$var_quality"
     fi
     var_psnr=0
     var_psnrinfo=""
     if test $opt_compare_psnr -eq 1; then
-	var_psnr=$(compare -auto-orient -metric PSNR "$inp" "$out.webp" "null:" 2>&1)
+	var_psnr=$(compare -auto-orient -metric PSNR "$3" "$4" "null:" 2>&1)
 	var_psnrinfo=", psnr=$var_psnr"
     fi
 }
@@ -504,7 +509,7 @@ function ksvu-overview-ssim()
     files=0
     for i in *.jpg; do
 	n=$(basename $i .jpg);
-	ksvu-compress-ratio overview $i ${opt_directory}/$n.webp
+	ksvu-compress-ratio overview $i $i ${opt_directory}/$n.webp
 	printf "$i -> $n.webp, size=$inpsize => $outsize ($ratio%%)$var_ssiminfo\n"
 	total_in=$((total_in + inpsize))
 	total_out=$((total_out +  outsize))
@@ -514,7 +519,7 @@ function ksvu-overview-ssim()
     printf "Total: files=$files, $total_in => $total_out ($total_ratio%%)\n"
 }
 
-OPTS=$(getopt -o v::acd:PS::jkl:Ls:tT:tw:h:oq:Qfm: --long verbose::,help,all,compare,compare-psnr,compare-ssim::,directory:,jpeg,keep,lossless:,list,scale:,timing,tools:,width:,height:,overview,quality:,pngquant,pngcolors:,midfix:,fixhtml,force,quiet,print-options -n "ksvu-webp" -- "$@")
+OPTS=$(getopt -o v::acd:PS::jkl:Ls:tT:tw:h:oq:Qfm: --long verbose::,help,all,version,compare,compare-psnr,compare-ssim::,directory:,jpeg,keep,lossless:,list,scale:,timing,tools:,width:,height:,overview,quality:,pngquant,pngcolors:,midfix:,fixhtml,force,quiet,print-options -n "ksvu-webp" -- "$@")
 
 if test $? != 0; then
     echo "Terminating..." >&2
@@ -545,6 +550,12 @@ while true ; do
 	    ;;
 	--quiet)
 	    opt_verbose=0
+	    shift
+	    ;;
+	--version)
+	    echo "$(basename $0) $ksvu_webp_version"
+	    echo "Copyright (C) 2022 Klimaschutz-von-unten.de (https://ksvu.de/webp/)"
+	    exit 0
 	    shift
 	    ;;
 	-a|--all)
@@ -707,6 +718,30 @@ ksvu-printf 5 "    ssim: $opt_compare_ssim (target=$opt_compare_ssim_target)\n"
 
 ksvu-gimp-prepare
 
+# derive quality value from ssim target
+if test $opt_compare_ssim_target -gt 0; then
+    if test $opt_compare_ssim_target -lt 88; then
+	opt_compare_ssim_target=88
+    elif test $opt_compare_ssim_target -gt 95; then
+	opt_compare_ssim_target=95
+    fi
+    if test $opt_compare_ssim_target -lt 89; then
+	opt_quality=50
+    elif test $opt_compare_ssim_target -lt 90; then
+	opt_quality=75
+    elif test $opt_compare_ssim_target -lt 91; then
+	opt_quality=80
+    elif test $opt_compare_ssim_target -lt 92; then
+	opt_quality=85
+    elif test $opt_compare_ssim_target -lt 93; then
+	opt_quality=87
+    elif test $opt_compare_ssim_target -lt 94; then
+	opt_quality=89
+    else
+	opt_quality=90
+    fi
+fi
+
 declare -A usage
 for arg; do
     ksvu-measure-start "file"
@@ -739,29 +774,7 @@ for arg; do
     fi
     name=$(basename "$arg" .$suffix)
     inp="$arg"
-    inp2="$name-work.$suffix"
-    if test $opt_compare_ssim_target -gt 0; then
-	if test $opt_compare_ssim_target -lt 88; then
-	    opt_compare_ssim_target=88
-	elif test $opt_compare_ssim_target -gt 95; then
-	    opt_compare_ssim_target=95
-	fi
-	if test $opt_compare_ssim_target -lt 89; then
-	    opt_quality=50
-	elif test $opt_compare_ssim_target -lt 90; then
-	    opt_quality=75
-	elif test $opt_compare_ssim_target -lt 91; then
-	    opt_quality=80
-	elif test $opt_compare_ssim_target -lt 92; then
-	    opt_quality=85
-	elif test $opt_compare_ssim_target -lt 93; then
-	    opt_quality=87
-	elif test $opt_compare_ssim_target -lt 94; then
-	    opt_quality=89
-	else
-	    opt_quality=90
-	fi
-    fi
+    work="$name-work.$suffix"
     if test $var_lossless -eq 0 -a $opt_quality -le 0; then
 	var_quality=$(($(identify -format %Q $inp) + opt_quality))
     else
@@ -772,34 +785,26 @@ for arg; do
     outwork="${opt_directory}/.${name}${opt_midfix}"
     outfile="${opt_directory}/${out}.webp"
     ksvu-printf 1 " -> $outfile ..."
-    ksvu-imagesize-get "$inp" "${outfile}" "$inp2" "$suffix"
+    ksvu-imagesize-get "$inp" "${outfile}" "$work" "$suffix"
 
     if test $var_png -eq 1 -a $opt_pngquant -eq 1; then
 	if test ${has_pngquant:-0} -eq 1; then
-	    src="$inp"
-	    if test -s "$inp2"; then
-		src="$inp2"
-	    fi
 	    ksvu-printf 2 "\n    (pngquant: $name-q.png colors=$opt_pngcolors)"
-	    pngquant --speed 1 --nofs $opt_pngcolors -o "$name-q.png" "$src"
+	    pngquant --speed 1 --nofs $opt_pngcolors -o "$name-q.png" "$work"
 	    if test -s "$name-q.png"; then
-		mv -f "$name-q.png" "$inp2"
+		mv -f "$name-q.png" "$work"
 	    fi
 	else
 	    echo "$0 warning: pngquant not installed" 1>&2
 	fi
     fi
     
-    if test ! -f $inp2; then
-	ln -s $inp $inp2
-    fi
-
     if test ${opt_jpeg:-0} -eq 1 -o ${opt_all:-0} -eq 1; then
 	size_cjpeg=0
 	if test ${has_cjpeg:-0} -eq 1 -a $var_lossless -eq 0 ; then
 	    ksvu-measure-start "cjpeg"
-	    ksvu-webp-convert-cjpeg "$inp2" "$out-cjpeg.jpg"
-	    ksvu-compress-ratio cjpeg "$inp" "$out-cjpeg.jpg"
+	    ksvu-webp-convert-cjpeg "$work" "$out-cjpeg.jpg"
+	    ksvu-compress-ratio cjpeg "$inp" "$work" "$out-cjpeg.jpg"
 	    ksvu-measure-stop "cjpeg" ", " ""
 	    ksvu-conversion-info cjpeg
 	    size_cjpeg=$outsize
@@ -821,8 +826,8 @@ for arg; do
 	ssim_gimp=0
 	if test ${has_gimp:-0} -eq 1; then
 	    ksvu-measure-start "gimp-webp"
-	    ksvu-webp-convert-gimp "$inp2" "$outwork-gimp.webp"
-	    ksvu-compress-ratio gimp "$inp" "$outwork-gimp.webp"
+	    ksvu-webp-convert-gimp "$work" "$outwork-gimp.webp"
+	    ksvu-compress-ratio gimp "$inp" "$work" "$outwork-gimp.webp"
 	    ksvu-measure-stop "gimp-webp" ", " ""
 	    ksvu-conversion-info gimp
 	    size_gimp=$outsize
@@ -833,8 +838,8 @@ for arg; do
 	ssim_cwebp=0
 	if test ${has_cwebp:-0} -eq 1; then
 	    ksvu-measure-start "cwebp-webp"
-	    ksvu-webp-convert-cwebp "$inp2" "$outwork-cwebp.webp"
-	    ksvu-compress-ratio cwebp "$inp" "$outwork-cwebp.webp"
+	    ksvu-webp-convert-cwebp "$work" "$outwork-cwebp.webp"
+	    ksvu-compress-ratio cwebp "$inp" "$work" "$outwork-cwebp.webp"
 	    ksvu-measure-stop "cwebp-webp" ", " ""
 	    ksvu-conversion-info cwebp
 	    size_cwebp=$outsize
@@ -845,8 +850,8 @@ for arg; do
 	ssim_magick=0
 	if test ${has_magick:-0} -eq 1; then
 	    ksvu-measure-start "magick-webp"
-	    ksvu-webp-convert-magick "$inp2" "$outwork-magick.webp"
-	    ksvu-compress-ratio magick "$inp" "$outwork-magick.webp"
+	    ksvu-webp-convert-magick "$work" "$outwork-magick.webp"
+	    ksvu-compress-ratio magick "$inp" "$work" "$outwork-magick.webp"
 	    ksvu-measure-stop "magick-webp" ", " ""
 	    ksvu-conversion-info magick
 	    size_magick=$outsize
@@ -860,7 +865,7 @@ for arg; do
 	if test $opt_compare_ssim_target -gt 0; then
 	    ksvu-printf 2 "\n    (using $webp_tool tool for ssim=0.${opt_compare_ssim_target} target conversion (ssimsize=${webp_ssimsize:-0.0})"
 	    var_ssim=$webp_ssim
-	    ksvu-webp-convert-ssim-target $webp_tool "$inp" "$inp2" "$outwork-$webp_tool.webp"
+	    ksvu-webp-convert-ssim-target $webp_tool "$inp" "$work" "$outwork-$webp_tool.webp"
 	fi
 
 	if test -f $outwork-${webp_tool}.webp; then
@@ -870,7 +875,7 @@ for arg; do
 	fi
 
 	if test $opt_verbose -eq 1; then
-	    ksvu-compress-ratio "" "$inp" "$out.webp"
+	    ksvu-compress-ratio "" "$inp" "$work" "$out.webp"
 	    ksvu-printf 1 " "
 	fi
     fi
@@ -894,8 +899,8 @@ for arg; do
     if test $opt_keep -eq 0; then
 	rm -f "${outwork}-"*.webp
     fi
-    if test -e "$inp2"; then
-	rm -f "$inp2"
+    if test -e "$work"; then
+	rm -f "$work"
     fi
     # list input and output files
     if test $opt_list -eq 1; then
