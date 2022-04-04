@@ -73,7 +73,8 @@ converting images quickly here are the basic options to do so:
 ## Contact
 
 Stefan Ruppert <webp@klimaschutz-von-unten.de>  
-Web:     https://klimaschutz-von-unten.de/  
+Web:     https://ksvu.de/webp
+Blog:    https://klimaschutz-von-unten.de/ (in german)  
 Twitter: https://twitter.com/unten_de  
 
 ## License
