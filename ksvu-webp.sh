@@ -51,6 +51,7 @@ opt_timing=0
 opt_verbose=1
 opt_webp=1
 opt_width=0
+opt_workdir=/tmp
 # end script options
 
 # script variables
@@ -221,6 +222,8 @@ function ksvu-webp-help()
     echo "    sets verbose mode with optionally passed verbose level (0 to 5). Default is $opt_verbose."
     echo "-w[pixel], --width[=pixel]"
     echo "    specifies the width number of pixel to scale the image"
+    echo "-W<dir>, --workdir=<dir>"
+    echo "    directory used to write working (temporary) files to. Default is $opt_workdir"
     exit 0
 }
 function ksvu-gimp-prepare()
@@ -519,7 +522,7 @@ function ksvu-overview-ssim()
     printf "Total: files=$files, $total_in => $total_out ($total_ratio%%)\n"
 }
 
-OPTS=$(getopt -o v::acd:PS::jkl:Ls:tT:tw:h:oq:Qfm: --long verbose::,help,all,version,compare,compare-psnr,compare-ssim::,directory:,jpeg,keep,lossless:,list,scale:,timing,tools:,width:,height:,overview,quality:,pngquant,pngcolors:,midfix:,fixhtml,force,quiet,print-options -n "ksvu-webp" -- "$@")
+OPTS=$(getopt -o v::acd:PS::jkl:Ls:tT:tw:h:oq:Qfm:W: --long verbose::,help,all,version,compare,compare-psnr,compare-ssim::,directory:,jpeg,keep,lossless:,list,scale:,timing,tools:,width:,height:,overview,quality:,pngquant,pngcolors:,midfix:,fixhtml,force,quiet,print-options,workdir -n "ksvu-webp" -- "$@")
 
 if test $? != 0; then
     echo "Terminating..." >&2
@@ -674,6 +677,10 @@ while true ; do
 	    opt_fixhtml=1
 	    shift
 	    ;;
+	-W|--workdir)
+	    opt_workdir="$2"
+	    shift 2
+	    ;;
 	--)
 	    shift
 	    break;
@@ -774,15 +781,15 @@ for arg; do
     fi
     name=$(basename "$arg" .$suffix)
     inp="$arg"
-    work="$name-work.$suffix"
+    work="${opt_workdir}/$name-work.$suffix"
     if test $var_lossless -eq 0 -a $opt_quality -le 0; then
-	var_quality=$(($(identify -format %Q $inp) + opt_quality))
+	var_quality=$(($(identify -format %Q "$inp") + opt_quality))
     else
 	var_quality=$opt_quality
     fi
     ksvu-printf 1 "Converting $inp"
     out="${name}${opt_midfix}"
-    outwork="${opt_directory}/.${name}${opt_midfix}"
+    outwork="${opt_workdir}/${name}${opt_midfix}"
     outfile="${opt_directory}/${out}.webp"
     ksvu-printf 1 " -> $outfile ..."
     ksvu-imagesize-get "$inp" "${outfile}" "$work" "$suffix"
