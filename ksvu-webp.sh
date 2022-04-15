@@ -447,9 +447,13 @@ function ksvu-imagesize-get()
     if test "$inporient" != "TopLeft" -a $inporient != "Undefined"; then
 	var_autoorient=" -> perform auto orientation:"
 	mogrify -auto-orient "$3"
-	tmp=$imgwidth
-	imgwidth=$imgheight
-	imgheight=$tmp
+	case $inporient in
+	    LeftBottom|LeftTop|RightBottom|RightTop)
+		tmp=$imgwidth
+		imgwidth=$imgheight
+		imgheight=$tmp
+		;;
+	esac
 	if test ! -s "$3"; then
 	    echo "$0: auto orientation failed" 1>&2
 	fi
@@ -784,7 +788,9 @@ ksvu-printf 5 "    scale: $opt_scale\n"
 ksvu-printf 5 "    midfix: $opt_midfix\n"
 ksvu-printf 5 "    ssim: $opt_compare_ssim (target=$opt_compare_ssim_target)\n"
 
-ksvu-gimp-prepare
+if test $has_gimp -eq 1; then
+    ksvu-gimp-prepare
+fi
 
 ksvu-webp-convert-ssim-target-quality-get
 
@@ -878,6 +884,7 @@ for arg; do
 	size_avif=0
 	if test ${has_magick_avif:-0} -eq 1; then
 	    webp_tool="avif"
+	    var_quality=$opt_quality
 
 	    ksvu-measure-start "avif"
 	    ksvu-webp-convert-magick-avif "$work" "$outwork-magick.avif"
