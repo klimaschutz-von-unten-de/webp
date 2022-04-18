@@ -95,6 +95,9 @@ has_magick_avif=$(ksvu-check-magick-format AVIF)
 # option section copied from script; change these values to use your personal defaults
 EOF
     sed -n '/^# start script options/,/^# end script options/p' <$0 | grep -v "#" >> $HOME/.ksvu-webp
+    if test $(ksvu-check-tool firefox) -eq 0; then
+	sed -i -e "s/opt_browser=firefox/opt_browser=/g" $HOME/.ksvu-webp
+    fi
 fi
 
 # source user default options
@@ -315,21 +318,30 @@ function ksvu-webp-convert-ssim-target-quality-get()
 	elif test $opt_compare_ssim_target -gt 95; then
 	    opt_compare_ssim_target=95
 	fi
-	if test $opt_compare_ssim_target -lt 89; then
-	    opt_quality=50
-	elif test $opt_compare_ssim_target -lt 90; then
-	    opt_quality=75
-	elif test $opt_compare_ssim_target -lt 91; then
-	    opt_quality=80
-	elif test $opt_compare_ssim_target -lt 92; then
-	    opt_quality=85
-	elif test $opt_compare_ssim_target -lt 93; then
-	    opt_quality=87
-	elif test $opt_compare_ssim_target -lt 94; then
-	    opt_quality=89
-	else
-	    opt_quality=90
-	fi
+	index=$((opt_compare_ssim_target - 88))
+	case $1 in
+	    avif)
+		#                88 89 90 91 92 93 94 95
+		var_quality_def=(50 60 70 75 80 82 84 86)
+		opt_quality=${var_quality_def[$index]}
+		;;
+	    cjpeg)
+		#                88 89 90 91 92 93 94 95
+		var_quality_def=(50 75 80 83 86 87 88 89)
+		opt_quality=${var_quality_def[$index]}
+		;;
+	    cwebp)
+		#                88 89 90 91 92 93 94 95
+		var_quality_def=(50 60 70 78 81 83 85 87)
+		opt_quality=${var_quality_def[$index]}
+		;;
+	    *)
+		#                88 89 90 91 92 93 94 95
+		var_quality_def=(50 70 75 80 82 84 86 88)
+		opt_quality=${var_quality_def[$index]}
+		;;
+	esac
+	var_quality=$opt_quality
     fi
 }
 function ksvu-webp-convert-ssim-target()
@@ -337,19 +349,40 @@ function ksvu-webp-convert-ssim-target()
     var_ssim_target=$(awk 'BEGIN {printf "%.2f", ('$opt_compare_ssim_target' / 100.0);}' )
     var_ssim_diff=$(awk 'BEGIN {printf "%.3f", ('$var_ssim_target' - '${var_ssim:-0}');}' )
     var_ssim_abs=$(awk 'BEGIN { printf "%.3f", ('$var_ssim_diff'<0 ? - '$var_ssim_diff' : '$var_ssim_diff');}' )
+    var_ssim_divisor=2.5
     var_quality=$opt_quality
-    var_quality_max=-1
+    var_quality_max=97
     var_quality_min=-1
+    var_quality_last=0
+    ssim_is=""
 
+    declare -a var_quality_done
     while (( $(echo "$var_ssim_abs > 0.002 || $var_ssim_diff < -0.002" |bc -l) )); do
-	var_quality_add=$(awk 'BEGIN {printf "%d", ('$var_ssim_diff' * 1000 / 2.5);}' )
+	var_quality_add=$(awk 'BEGIN {printf "%d", ('$var_ssim_diff' * 1000 / '$var_ssim_divisor');}' )
+
+	var_ssim_divisor_next=$var_ssim_divisor	
 	if test $var_quality_add -eq 0; then
 	    var_quality_add=$(awk 'BEGIN { printf "%d", ('$var_ssim_diff'<0 ? -1:1);}' )
+	elif test $var_quality_add -lt 0; then
+	    if test "$ssim_is" = "greater"; then
+		var_ssim_divisor_next=$(awk 'BEGIN { printf "%.1f", ('$var_ssim_divisor' - 0.5);}' )
+	    fi
+	    ssim_is="greater"
+	else
+	    if test "$ssim_is" = "less"; then
+		var_ssim_divisor_next=$(awk 'BEGIN { printf "%.1f", ('$var_ssim_divisor' - 0.5);}' )
+	    fi
+	    ssim_is="less"
 	fi
-	if test $var_quality_max -eq -1; then
+	if test "$var_ssim_divisor_next" = "0.0"; then
+	    var_ssim_divisor_next=1.0
+	fi
+	if test $var_quality_max -lt $var_quality; then
 	    var_quality_max=$var_quality
-	elif test $var_quality_max -lt $var_quality; then
-	    var_quality_max=$var_quality
+	else
+	    if test $var_quality_add -lt 0; then
+		var_quality_max=$var_quality
+	    fi
 	fi
 
 	if test $((var_quality + var_quality_add)) -ge $var_quality_max; then
@@ -368,6 +401,13 @@ function ksvu-webp-convert-ssim-target()
 	    fi
 	else
 	    var_quality=$((var_quality + var_quality_add))
+	    if test ${var_quality_done[$var_quality]:-0} -eq 1; then
+		if test $var_quality_done -lt 0; then
+		    var_quality=$((var_quality + 1))
+		else
+		    var_quality=$((var_quality - 1))
+		fi
+	    fi
 	fi
 
 	if test $var_quality_min -eq -1; then
@@ -375,20 +415,21 @@ function ksvu-webp-convert-ssim-target()
 	elif test $var_quality_min -gt $var_quality; then
 	    var_quality_min=$var_quality
 	fi
-	if test $var_quality_add -lt 0; then
-	    ssim_is="greater"
-	else
-	    ssim_is="less"
+	if test $var_quality -eq $var_quality_last; then
+	    break;
 	fi
-	ksvu-printf 4 "\n        (current ssim=${var_ssim:-0} is $ssim_is than target ssim=$var_ssim_target, diff=$var_ssim_diff, quality_add=$var_quality_add,quality=$var_quality[min:$var_quality_min,max=$var_quality_max])"
+	ksvu-printf 4 "\n        (current ssim=${var_ssim:-0} is $ssim_is than target ssim=$var_ssim_target, diff=$var_ssim_diff, divisor=$var_ssim_divisor,quality_add=$var_quality_add,quality=$var_quality[min:$var_quality_min,max=$var_quality_max])"
+	var_quality_done[$var_quality]=1
 	ksvu-webp-convert-$1 "$3" "$4"
 	ksvu-compress-ratio $1 "$2" "$3" "$4"
 	ksvu-conversion-info $1
 	var_ssim_diff=$(awk 'BEGIN {printf "%.3f", ('$var_ssim_target' - '${var_ssim:-0}');}' )
 	var_ssim_abs=$(awk 'BEGIN { printf "%.3f", ('$var_ssim_diff'<0 ? - '$var_ssim_diff' : '$var_ssim_diff');}' )
+	var_ssim_divisor=$var_ssim_divisor_next
 	if test $var_quality_min -eq $var_quality_max; then
 	    break;
 	fi
+	var_quality_last=$var_quality
     done
 }
 
@@ -785,8 +826,10 @@ ksvu-printf 5 "    height: $opt_height\n"
 ksvu-printf 5 "    lossless: $opt_lossless\n"
 ksvu-printf 5 "    quality: $opt_quality\n"
 ksvu-printf 5 "    scale: $opt_scale\n"
-ksvu-printf 5 "    midfix: $opt_midfix\n"
 ksvu-printf 5 "    ssim: $opt_compare_ssim (target=$opt_compare_ssim_target)\n"
+ksvu-printf 5 "    directory: $opt_directory\n"
+ksvu-printf 5 "    midfix: $opt_midfix\n"
+
 
 if test $has_gimp -eq 1; then
     ksvu-gimp-prepare
@@ -863,6 +906,7 @@ for arg; do
 	size_cjpeg=0
 	if test ${has_cjpeg:-0} -eq 1 -a $var_lossless -eq 0 ; then
 	    webp_tool="cjpeg"
+	    ksvu-webp-convert-ssim-target-quality-get $webp_tool
 
 	    ksvu-measure-start "cjpeg"
 	    ksvu-webp-convert-cjpeg "$work" "$outwork-$webp_tool.jpg"
@@ -871,12 +915,15 @@ for arg; do
 	    ksvu-conversion-info cjpeg
 	    usage[cjpeg]=$((usage[cjpeg] + 1))
 	    
+	    if test -f "${outfile}.jpg"; then
+		outfile="${outfile}-cjpeg"
+	    fi
 	    if test $opt_compare_ssim_target -gt 0; then
 		ksvu-webp-convert-ssim-target cjpeg "$inp" "$work" "$outwork-$webp_tool.jpg"
 
-		ksvu-printf 2 "\n    (using $webp_tool $outfile-cjpeg.jpg version; size: $inpsize -> $outsize = ${ratio}%%; ssim=${var_ssim:-0.0})"
+		ksvu-printf 2 "\n    (using $webp_tool $outfile.jpg version; size: $inpsize -> $outsize = ${ratio}%%; ssim=${var_ssim:-0.0})"
 	    fi
-	    cp -f "$outwork-$webp_tool.jpg" "$out-cjpeg.jpg"
+	    cp -f "$outwork-$webp_tool.jpg" "${outfile}.jpg"
 	fi
     fi
 
@@ -884,7 +931,7 @@ for arg; do
 	size_avif=0
 	if test ${has_magick_avif:-0} -eq 1; then
 	    webp_tool="avif"
-	    var_quality=$opt_quality
+	    ksvu-webp-convert-ssim-target-quality-get $webp_tool
 
 	    ksvu-measure-start "avif"
 	    ksvu-webp-convert-magick-avif "$work" "$outwork-magick.avif"
@@ -897,7 +944,7 @@ for arg; do
 		ksvu-webp-convert-ssim-target magick-avif "$inp" "$work" "$outwork-magick.avif"
 		ksvu-printf 2 "\n    (using $webp_tool $outfile.avif version; size: $inpsize -> $outsize = ${ratio}%%; ssim=${var_ssim:-0.0})"
 	    fi
-	    cp -f "$outwork-magick.avif" "$out.avif"
+	    cp -f "$outwork-magick.avif" "${outfile}.avif"
 	fi
     fi
 
@@ -912,7 +959,8 @@ for arg; do
 	gimp_ratio=""
 	if test ${has_gimp:-0} -eq 1; then
 	    webp_tool="gimp"
-	    var_quality=$opt_quality
+	    ksvu-webp-convert-ssim-target-quality-get $webp_tool
+
 	    ksvu-measure-start "gimp-webp"
 	    ksvu-webp-convert-gimp-webp "$work" "$outwork-gimp.webp"
 	    ksvu-compress-ratio gimp "$inp" "$work" "$outwork-gimp.webp"
@@ -931,7 +979,8 @@ for arg; do
 	cwebp_ratio=""
 	if test ${has_cwebp:-0} -eq 1; then
 	    webp_tool="cwebp"
-	    var_quality=$opt_quality
+	    ksvu-webp-convert-ssim-target-quality-get $webp_tool
+
 	    ksvu-measure-start "cwebp-webp"
 	    ksvu-webp-convert-cwebp-webp "$work" "$outwork-cwebp.webp"
 	    ksvu-compress-ratio cwebp "$inp" "$work" "$outwork-cwebp.webp"
@@ -950,7 +999,8 @@ for arg; do
 	magick_ratio=""
 	if test ${has_magick:-0} -eq 1; then
 	    webp_tool="magick"
-	    var_quality=$opt_quality
+	    ksvu-webp-convert-ssim-target-quality-get $webp_tool
+
 	    ksvu-measure-start "magick-webp"
 	    ksvu-webp-convert-magick-webp "$work" "$outwork-magick.webp"
 	    ksvu-compress-ratio magick "$inp" "$work" "$outwork-magick.webp"
