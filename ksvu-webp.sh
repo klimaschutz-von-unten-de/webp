@@ -322,12 +322,13 @@ function ksvu-webp-convert-ssim-target-quality-get()
     # derive quality value from ssim target
     if test $opt_compare_ssim_target -gt 0; then
 	var_ssim_iterations=1
+	opt_compare_ssim_target_tmp=$opt_compare_ssim_target
 	if test $opt_compare_ssim_target -lt 88; then
-	    opt_compare_ssim_target=88
+	    opt_compare_ssim_target_tmp=88
 	elif test $opt_compare_ssim_target -gt 95; then
-	    opt_compare_ssim_target=95
+	    opt_compare_ssim_target_tmp=95
 	fi
-	index=$((opt_compare_ssim_target - 88))
+	index=$((opt_compare_ssim_target_tmp - 88))
 	case $1 in
 	    avif)
 		#                88 89 90 91 92 93 94 95
@@ -431,7 +432,7 @@ function ksvu-webp-convert-ssim-target()
 	if test $var_quality -eq $var_quality_last; then
 	    break;
 	fi
-	ksvu-printf 4 "\n        (current ssim=${var_ssim:-0} is $ssim_is than target ssim=$var_ssim_target $inpquality, diff=$var_ssim_diff, divisor=$var_ssim_divisor,quality_add=$var_quality_add,quality=$var_quality[min:$var_quality_min,max=$var_quality_max])"
+	ksvu-printf 4 "\n        (current ssim=${var_ssim:-0} is $ssim_is than target ssim=\"${var_ssim_target}\" $inpquality, diff=$var_ssim_diff, divisor=$var_ssim_divisor,quality_add=$var_quality_add,quality=$var_quality[min:$var_quality_min,max=$var_quality_max])"
 	ksvu-webp-convert-$1 "$3" "$var_outfile"
 	ksvu-compress-ratio $1 "$2" "$3" "$var_outfile"
 	var_ssim_iterations=$((var_ssim_iterations + 1))
@@ -570,7 +571,7 @@ function ksvu-compress-ratio()
     var_ssiminfo=""
     var_qualityinfo=""
     if test $opt_compare_ssim -eq 1; then
-	var_ssim=$(MAGICK_THREAD_LIMIT=${var_compare_cpus} compare -auto-orient -metric SSIM "$3" "$4" "null:" 2>&1)
+	var_ssim=$(MAGICK_THREAD_LIMIT=${var_compare_cpus} compare -quiet -auto-orient -metric SSIM "$3" "$4" "null:" 2>&1 | tail -1)
 	var_ssiminfo=", ssim=$var_ssim"
 	var_qualityinfo=", quality=$var_quality"
 	if test $var_ssim_iterations -gt 0; then
