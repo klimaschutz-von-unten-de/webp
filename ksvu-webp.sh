@@ -325,12 +325,13 @@ function ksvu-webp-convert-ssim-target-quality-get()
     # derive quality value from ssim target
     if test $opt_compare_ssim_target -gt 0; then
 	var_ssim_iterations=1
+	opt_compare_ssim_target_tmp=$opt_compare_ssim_target
 	if test $opt_compare_ssim_target -lt 88; then
 	    opt_compare_ssim_target=88
 	elif test $opt_compare_ssim_target -gt 99; then
 	    opt_compare_ssim_target=99
 	fi
-	index=$((opt_compare_ssim_target - 88))
+	index=$((opt_compare_ssim_target_tmp - 88))
 	case $1 in
 	    avif)
 		#                88 89 90 91 92 93 94 95 96 97 98 99
@@ -577,7 +578,7 @@ function ksvu-compress-ratio()
     var_ssiminfo=""
     var_qualityinfo=""
     if test $opt_compare_ssim -eq 1 -a $var_lossless -eq 0; then
-	var_ssim=$(MAGICK_THREAD_LIMIT=${var_compare_cpus} compare -auto-orient -metric SSIM "$3" "$4" "null:" 2>&1)
+	var_ssim=$(MAGICK_THREAD_LIMIT=${var_compare_cpus} compare -auto-orient -metric SSIM "$3" "$4" "null:" 2>&1 | tail -1)
 	var_ssiminfo=", ssim=$var_ssim"
 	var_qualityinfo=", quality=$var_quality"
 	if test $var_ssim_iterations -gt 0; then
